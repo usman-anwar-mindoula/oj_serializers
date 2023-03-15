@@ -221,7 +221,7 @@ private
     #
     # Returns an Oj::StringWriter instance, which is encoded as raw json.
     def many_as_hash(items, options = {})
-      items.map( { |item| one_as_hash(item, options) })
+      items.map { |item| one_as_hash(item, options) }
     end
 
     # Public: Creates an alias for the internal object.
