@@ -49,7 +49,7 @@ class OjSerializers::Serializer
     write_to_json(writer)
   end
 
-  def write_hash(item, options = {})
+  def update_state_for_hash(item, options = {})
     item.define_singleton_method(:options) { options }
     @memo.clear if defined?(@memo)
     @object = item
@@ -163,7 +163,7 @@ private
 
     # Internal: Delegates to the instance methods, the advantage is that we can
     # reuse the same serializer instance to serialize different objects.
-    delegate :write_one, :write_many, :write_flat, :write_hash, to: :instance
+    delegate :write_one, :write_many, :write_flat, :update_state_for_hash, to: :instance
 
     # Internal: Keep a reference to the default `write_one` method so that we
     # can use it inside cached overrides and benchmark tests.
@@ -198,7 +198,7 @@ private
     # Returns a Hash.
     def one_as_hash(item, options = {})
       return if item.blank?
-      write_hash(item, options)
+      update_state_for_hash(item, options)
       attributes_hash(item).merge(associations_hash(item))
     end
 
@@ -212,6 +212,16 @@ private
       writer = new_json_writer
       write_many(writer, items, options)
       writer
+    end
+
+    # Public: Hashes an array of items using this serializer.
+    #
+    # items - Must respond to `each`.
+    # options - list of external options to pass to the sub class (available in `item.options`)
+    #
+    # Returns an Oj::StringWriter instance, which is encoded as raw json.
+    def many_as_hash(items, options = {})
+      items.map( { |item| one_as_hash(item, options) })
     end
 
     # Public: Creates an alias for the internal object.
