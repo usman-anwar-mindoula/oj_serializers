@@ -48,6 +48,12 @@ class OjSerializers::Serializer
     write_to_json(writer)
   end
 
+  def write_hash(item, options = {})
+    item.define_singleton_method(:options) { options }
+    @memo.clear if defined?(@memo)
+    @object = item
+  end
+
   # NOTE: Helps developers to remember to keep serializers stateless.
   if DEV_MODE
     prepend(Module.new do
@@ -156,7 +162,7 @@ private
 
     # Internal: Delegates to the instance methods, the advantage is that we can
     # reuse the same serializer instance to serialize different objects.
-    delegate :write_one, :write_many, :write_flat, to: :instance
+    delegate :write_one, :write_many, :write_flat, :write_hash, to: :instance
 
     # Internal: Keep a reference to the default `write_one` method so that we
     # can use it inside cached overrides and benchmark tests.
@@ -190,10 +196,9 @@ private
     #
     # Returns a Hash.
     def one_as_hash(item, options = {})
-      item.define_singleton_method(:options) { options }
-      @object = item
+      write_hash(item, options)
       _attributes.to_a.each_with_object({}) do |pair, hash|
-        hash[pair[0]] = fetch_value_from_strategy(pair[1][:strategy], pair[0])
+        hash[pair[0]] = fetch_value_from_strategy(item, pair[1][:strategy], pair[0])
       end
     end
 
@@ -237,14 +242,14 @@ private
     end
 
     # Obtains the value from the object or serializer using the specified strategy
-    def fetch_value_from_strategy(strategy, key)
+    def fetch_value_from_strategy(item, strategy, key)
       case strategy
       when :write_value_using_mongoid_strategy
-        @object.attributes[key]
+        item.attributes[key]
       when :write_value_using_hash_strategy
-        @object[key]
+        item[key]
       when :write_value_using_method_strategy
-        @object.send(key)
+        item.send(key)
       when :write_value_using_serializer_strategy
         instance.send(key)
       end
