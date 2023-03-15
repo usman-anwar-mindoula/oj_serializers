@@ -7,6 +7,7 @@ require 'active_support/core_ext/string/inflections'
 require 'oj'
 require 'oj_serializers/memo'
 require 'oj_serializers/json_value'
+require 'byebug'
 
 # Public: Implementation of an "ActiveModelSerializer"-like DSL, but with a
 # design that allows replacing the internal object, which greatly reduces object
@@ -196,10 +197,9 @@ private
     #
     # Returns a Hash.
     def one_as_hash(item, options = {})
+      return if item.blank?
       write_hash(item, options)
-      _attributes.to_a.each_with_object({}) do |pair, hash|
-        hash[pair[0]] = fetch_value_from_strategy(item, pair[1][:strategy], pair[0])
-      end
+      attributes_hash(item).merge(associations_hash(item))
     end
 
     # Public: Serializes an array of items using this serializer.
@@ -256,6 +256,22 @@ private
     end
 
   protected
+
+    def attributes_hash(item)
+      _attributes.each_with_object({}) do |pair, hash|
+        hash[pair[0]] = fetch_value_from_strategy(item, pair[1][:strategy], pair[0])
+      end
+    end
+
+    def associations_hash(item)
+      _associations.each_with_object({}) do |pair, hash|
+        hash[pair[0]] = if pair[1][:write_method] == :write_one
+          pair[1][:serializer].one_as_hash(item.send(pair[0]))
+        else
+          item.send(pair[0]).map { |child| pair[1][:serializer].one_as_hash(child) }
+        end
+      end
+    end
 
     # Internal: Calculates the cache_key used to cache one serialized item.
     def item_cache_key(item, cache_key_proc)
