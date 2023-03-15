@@ -183,6 +183,20 @@ private
       writer
     end
 
+    # Public: Returns a hash using the configured attributes for the specified object.
+    #
+    # item - the item to serialize
+    # options - list of external options to pass to the sub class (available in `item.options`)
+    #
+    # Returns a Hash.
+    def one_as_hash(item, options = {})
+      item.define_singleton_method(:options) { options }
+      @object = item
+      _attributes.to_a.each_with_object({}) do |pair, hash|
+        hash[pair[0]] = fetch_value_from_strategy(pair[1][:strategy], pair[0])
+      end
+    end
+
     # Public: Serializes an array of items using this serializer.
     #
     # items - Must respond to `each`.
@@ -220,6 +234,20 @@ private
     def _associations
       @_associations = superclass.try(:_associations)&.dup || {} unless defined?(@_associations)
       @_associations
+    end
+
+    # Obtains the value from the object or serializer using the specified strategy
+    def fetch_value_from_strategy(strategy, key)
+      case strategy
+      when :write_value_using_mongoid_strategy
+        @object.attributes[key]
+      when :write_value_using_hash_strategy
+        @object[key]
+      when :write_value_using_method_strategy
+        @object.send(key)
+      when :write_value_using_serializer_strategy
+        instance.send(key)
+      end
     end
 
   protected
