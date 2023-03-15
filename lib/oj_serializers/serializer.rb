@@ -167,7 +167,7 @@ private
     alias non_cached_write_many write_many
 
     # Helper: Serializes the item unless it's nil.
-    def one_if(item, options = nil)
+    def one_if(item, options = {})
       one(item, options) if item
     end
 
@@ -177,7 +177,7 @@ private
     # options - list of external options to pass to the sub class (available in `item.options`)
     #
     # Returns an Oj::StringWriter instance, which is encoded as raw json.
-    def one(item, options = nil)
+    def one(item, options = {})
       writer = new_json_writer
       write_one(writer, item, options)
       writer
@@ -189,7 +189,7 @@ private
     # options - list of external options to pass to the sub class (available in `item.options`)
     #
     # Returns an Oj::StringWriter instance, which is encoded as raw json.
-    def many(items, options = nil)
+    def many(items, options = {})
       writer = new_json_writer
       write_many(writer, items, options)
       writer
@@ -237,7 +237,7 @@ private
       cache_options = { namespace: "#{name}#write_to_json", version: OjSerializers::VERSION }.freeze
 
       # Internal: Redefine `write_one` to use the cache for the serialized JSON.
-      define_singleton_method(:write_one) do |external_writer, item, options = nil|
+      define_singleton_method(:write_one) do |external_writer, item, options = {}|
         cached_item = CACHE.fetch(item_cache_key(item, cache_key_proc), cache_options) do
           writer = new_json_writer
           non_cached_write_one(writer, item, options)
@@ -247,7 +247,7 @@ private
       end
 
       # Internal: Redefine `write_many` to use fetch_multi from cache.
-      define_singleton_method(:write_many) do |external_writer, items, options = nil|
+      define_singleton_method(:write_many) do |external_writer, items, options = {}|
         # We define a one-off method for the class to receive the entire object
         # inside the `fetch_multi` block. Otherwise we would only get the cache
         # key, and we would need to build a Hash to retrieve the object.
