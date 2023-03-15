@@ -69,8 +69,8 @@ class OjSerializers::Serializer
   #
   # NOTE: Binds this instance to the specified object and options and writes
   # to json using the provided writer.
-  def write_one(writer, item, options = nil)
-    item.define_singleton_method(:options) { options } if options
+  def write_one(writer, item, options = {})
+    item.define_singleton_method(:options) { options }
     writer.push_object
     write_flat(writer, item)
     writer.pop
@@ -81,7 +81,7 @@ class OjSerializers::Serializer
   # writer - writer used to serialize results
   # items - items to serialize results for
   # options - list of external options to pass to the serializer (available as `options`)
-  def write_many(writer, items, options = nil)
+  def write_many(writer, items, options = {})
     writer.push_array
     items.each do |item|
       write_one(writer, item, options)
